@@ -1,4 +1,4 @@
-$TenantId = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"  # Replace with your ID
+$TenantId = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 
 try {
     Connect-AzAccount -Identity -TenantId $TenantId -ErrorAction Stop
