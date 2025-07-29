@@ -1,39 +1,60 @@
-Connect-AzAccount 
+$WarningPreference = "SilentlyContinue"
 
+if (Test-Path "$env:USERPROFILE\myAzContext.json") {
+    Import-AzContext -Path "$env:USERPROFILE\myAzContext.json"
+} else {
+    $context = Connect-AzAccount -DeviceCode
+    Save-AzContext -Path "$env:USERPROFILE\myAzContext.json"
+}
 
-$TenantId = "aa81de5e-ffef-4e67-954b-f82857df531f"  
-$ExcludedSubscriptionName = ""                 
-
-
-$subscriptions = Get-AzSubscription -TenantId $TenantId
-
+$subscriptions = Get-AzSubscription
+$ExcludedSubscriptionName = "" 
 
 $report = @()
 
 foreach ($subscription in $subscriptions) {
-
-    if ($subscription.Name -eq $ExcludedSubscriptionName) {
+    if ($ExcludedSubscriptionName -ne "" -and $subscription.Name -eq $ExcludedSubscriptionName) {
         Write-Output "Skipping $($subscription.Name)"
         continue
     }
+    try {
+        Write-Host " Switching to subscription: $($subscription.Name)" -ForegroundColor Cyan
+        Set-AzContext -SubscriptionId $subscription.Id | Out-Null
+    } catch {
+        Write-Warning "Could not access subscription $($subscription.Name). Skipping..."
+        continue
+    }
+    # Set-AzContext -SubscriptionId $subscription.Id | Out-Null
+    # Write-Output "Processing subscription: $($subscription.Name)"
 
-    Set-AzContext -SubscriptionId $subscription.Id | Out-Null
-    Write-Output "Checking subscription: $($subscription.Name)"
+    $nics = Get-AzNetworkInterface
+
+    $privateEndpoints = Get-AzPrivateEndpoint
+    # $peNicIds = $privateEndpoints.NetworkInterfaces.Id | ForEach-Object { $_.ToLower() }
+    $peNicIds = @()
+    if ($privateEndpoints) {
+        foreach ($pe in $privateEndpoints) {
+            foreach ($nicRef in $pe.NetworkInterfaces) {
+                $peNicIds += $nicRef.Id.ToLower()
+            }
+        }
+    }
 
 
-    $nics = Get-AzNetworkInterface | Where-Object { $_.VirtualMachine -eq $null }
 
     foreach ($nic in $nics) {
-        if ($nic.Name -like "*-pe-nic*") {
-            continue
-        }
+        $attachedToVm = $nic.VirtualMachine -ne $null
+        $attachedToPe = $peNicIds -contains $nic.Id.ToLower()
 
-        $report += [PSCustomObject]@{
-            NICName          = $nic.Name
-            ResourceGroup    = $nic.ResourceGroupName
-            SubscriptionName = $subscription.Name
-            Location         = $nic.Location
-            PrivateIP        = $nic.IpConfigurations[0].PrivateIpAddress
+        if (-not $attachedToVm -and -not $attachedToPe) {
+            $report += [PSCustomObject]@{
+                NICName          = $nic.Name
+                ResourceGroup    = $nic.ResourceGroupName
+                SubscriptionName = $subscription.Name
+                Location         = $nic.Location
+                PrivateIP        = $nic.IpConfigurations[0].PrivateIpAddress
+                AttachedTo       = "None"
+            }
         }
     }
 }
