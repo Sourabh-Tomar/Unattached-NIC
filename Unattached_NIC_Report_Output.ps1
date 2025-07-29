@@ -24,13 +24,10 @@ foreach ($subscription in $subscriptions) {
         Write-Warning "Could not access subscription $($subscription.Name). Skipping..."
         continue
     }
-    # Set-AzContext -SubscriptionId $subscription.Id | Out-Null
-    # Write-Output "Processing subscription: $($subscription.Name)"
 
     $nics = Get-AzNetworkInterface
 
     $privateEndpoints = Get-AzPrivateEndpoint
-    # $peNicIds = $privateEndpoints.NetworkInterfaces.Id | ForEach-Object { $_.ToLower() }
     $peNicIds = @()
     if ($privateEndpoints) {
         foreach ($pe in $privateEndpoints) {
