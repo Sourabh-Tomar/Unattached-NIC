@@ -18,7 +18,7 @@ foreach ($subscription in $subscriptions) {
         continue
     }
     try {
-        Write-Host " Switching to subscription: $($subscription.Name)" -ForegroundColor Cyan
+        Write-Host "Switching to subscription: $($subscription.Name)" -ForegroundColor Cyan
         Set-AzContext -SubscriptionId $subscription.Id | Out-Null
     } catch {
         Write-Warning "Could not access subscription $($subscription.Name). Skipping..."
@@ -40,8 +40,6 @@ foreach ($subscription in $subscriptions) {
         }
     }
 
-
-
     foreach ($nic in $nics) {
         $attachedToVm = $nic.VirtualMachine -ne $null
         $attachedToPe = $peNicIds -contains $nic.Id.ToLower()
@@ -59,4 +57,9 @@ foreach ($subscription in $subscriptions) {
     }
 }
 
-$report | Format-Table -AutoSize
+if ($report.Count -eq 0) {
+    Write-Host "No unattached NICs found across accessible subscriptions."
+} else {
+    Write-Host "Found $($report.Count) unattached NIC(s):`n"
+    $report | Format-Table -AutoSize
+}
