@@ -9,12 +9,15 @@ try {
 }
 
 $subscriptions = Get-AzSubscription
-$ExcludedSubscriptionName = "" 
+$ExcludedSubscriptionName = @(
+    "",
+    ""
+) 
 
 $report = @()
 
 foreach ($subscription in $subscriptions) {
-    if ($ExcludedSubscriptionName -ne "" -and $subscription.Name -eq $ExcludedSubscriptionName) {
+    if ($ExcludedSubscriptionName -contains $subscription.Name) {
         Write-Output "Skipping excluded subscription: $($subscription.Name)"
         continue
     }
